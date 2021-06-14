@@ -1,0 +1,15 @@
+{% extends "basic.html" %}
+{% block title %}UserList{% endblock %}
+{% block head %}
+  {{ super() }}
+  <style type="text/css">
+    .important { color: #336699; }
+  </style>
+{% endblock %}
+{% block content %}
+
+{% for user in users %}
+  <p>{{user.username}}</p>
+{% endfor %}
+
+{% endblock %}
