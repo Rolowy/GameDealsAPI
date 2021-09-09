@@ -9,15 +9,17 @@ from apscheduler.schedulers.background import BackgroundScheduler
 import time
 
 class RunChrome:
-    def __init__(self) -> None:
+    def __init__(self, refreshtime) -> None:
         self.mylist = []
         options = Options()
         options.headless = True
         options.add_argument("--window-size=1920,1200")
         self.driver = webdriver.Chrome(ChromeDriverManager().install(), options=options)
+        self.driver.get("https://gg.deals/deals/best-deals/")
+
 
         scheduler = BackgroundScheduler()
-        scheduler.add_job(func=RunChrome.mylist, trigger="interval", seconds=60, args=[self])
+        scheduler.add_job(func=RunChrome.mylist, trigger="interval", seconds=refreshtime, args=[self])
         scheduler.start()
 
     def reload(self):
@@ -31,13 +33,19 @@ class RunChrome:
         
         gamename = self.driver.find_elements_by_xpath("//div[@data-game-name]//a[@class='ellipsis title']")
         gameprice = self.driver.find_elements_by_xpath("//div[@data-game-name]//span[@class='numeric']")
-        
+        shop = self.driver.find_elements_by_xpath("//div[@data-game-name]")
+
+
+        # print(len(gamename))
+        # print(len(shop))
         n = 0;
         for el in gamename:
             a = gameprice[n].text
             a = a.replace("ł", "l")
-            
-            tables = [el.text, a]
+
+            shop_name = shop[n].get_attribute('data-shop-name')
+
+            tables = [el.text, a, shop_name]
             self.mylist.append(tables)
             
             n+=1
@@ -45,14 +53,14 @@ class RunChrome:
         print('Finish')
 
     def mylist(self):
-        RunChrome.reload(self)
+        RunChrome.reload(self,)
         print('Loaded data..')
 
     def viewlist(self) -> List:
         return self.mylist
 
 if __name__ == "__main__":
-    runchrome = RunChrome()
+    runchrome = RunChrome(30)
 
     app = Flask(__name__)
     app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
@@ -66,4 +74,4 @@ if __name__ == "__main__":
         else:
             return "Problem with loading RESTAPI."
 
-    app.run()
+    app.run(host='0.0.0.0', port=2500)
