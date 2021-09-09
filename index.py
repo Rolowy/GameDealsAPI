@@ -10,7 +10,7 @@ import time
 
 class RunChrome:
     def __init__(self, refreshtime) -> None:
-        self.mylist = []
+        self.mylist = {}
         options = Options()
         options.headless = True
         options.add_argument("--window-size=1920,1200")
@@ -24,7 +24,7 @@ class RunChrome:
 
     def reload(self):
         print('Cleaning list')
-        self.mylist.clear()
+        self.mylist = {}
 
         print('Load website')
         self.driver.get("https://gg.deals/deals/best-deals/")
@@ -44,16 +44,18 @@ class RunChrome:
             a = a.replace("ł", "l")
 
             shop_name = shop[n].get_attribute('data-shop-name')
-
-            tables = [el.text, a, shop_name]
-            self.mylist.append(tables)
-            
             n+=1
+
+            self.mylist.update({n:{"name":el.text,"values":a, "store":shop_name}})
+
+
+            # tables = [el.text, a, shop_name]
+            # self.mylist.append(tables)
 
         print('Finish')
 
     def mylist(self):
-        RunChrome.reload(self,)
+        RunChrome.reload(self)
         print('Loaded data..')
 
     def viewlist(self) -> List:
@@ -68,6 +70,9 @@ if __name__ == "__main__":
     @app.route("/")
     def hello_world():
         mylist = runchrome.viewlist()
+
+        
+        # return jsonify(games=data)
 
         if len(mylist) > 0:
             return jsonify(games=mylist)
