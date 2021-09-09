@@ -1,78 +1,69 @@
-import threading
-from flask import Flask, jsonify
-from markupsafe import escape
-from requests.sessions import session
-from requests_html import HTMLSession
+from typing import List
+from selenium import webdriver
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.options import Options
+from flask import Flask
+from flask import jsonify
+from apscheduler.schedulers.background import BackgroundScheduler
 
+import time
 
-
-def loadRoute(app):
-    @app.route("/")
-    def index():
-        print(jsonlist)
-        return jsonify(keys=jsonlist)
-
-class Session:
-    def __init__(self, url) -> None:
-        self.jsonlist  = []
-        self.session = HTMLSession()
-        print("Wywołanie sesji") 
-   
-        if self.get_page(url):
-            print('Pobranie elementów zakończone sukcesem')
-            print(self.get_Json())
-        
-    def get_Json(self):
-        return self.jsonlist
-
-    def get_page(self, url):
-        r = self.session.get("https://gg.deals/deals/best-deals/" + url)
-        print(f"Pobrano stronę | Status {r}")  
-        
-        if self.refresh(r):
-            r.close()
-            return True
-
-    def refresh(self, r): 
-        r.html.render(timeout=30)
-        name = r.html.find('.ellipsis.title')
-        price = r.html.find('.numeric')
-
-        for i in range(len(name)):
-            self.jsonlist.append({"name":name[i].text,
-            "price":price[i].text.replace("zł", "zl")})
-
-        print("Pobrano elementy")
-        return True
-
-    def close_session(self) -> None:
-        session.close()
-        print('Zamknięto sesję')
-
-class FlaskApp:
+class RunChrome:
     def __init__(self) -> None:
-        app = Flask(__name__)
-        app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
-        app.run(threaded=True)
+        self.mylist = []
+        options = Options()
+        options.headless = True
+        options.add_argument("--window-size=1920,1200")
+        self.driver = webdriver.Chrome(ChromeDriverManager().install(), options=options)
 
-        loadRoute(app)
+        scheduler = BackgroundScheduler()
+        scheduler.add_job(func=RunChrome.mylist, trigger="interval", seconds=60, args=[self])
+        scheduler.start()
 
-        print("Flask App: Enabled")
+    def reload(self):
+        print('Cleaning list')
+        self.mylist.clear()
 
+        print('Load website')
+        self.driver.get("https://gg.deals/deals/best-deals/")
+
+        
+        
+        gamename = self.driver.find_elements_by_xpath("//div[@data-game-name]//a[@class='ellipsis title']")
+        gameprice = self.driver.find_elements_by_xpath("//div[@data-game-name]//span[@class='numeric']")
+        
+        n = 0;
+        for el in gamename:
+            a = gameprice[n].text
+            a = a.replace("ł", "l")
+            
+            tables = [el.text, a]
+            self.mylist.append(tables)
+            
+            n+=1
+
+        print('Finish')
+
+    def mylist(self):
+        RunChrome.reload(self)
+        print('Loaded data..')
+
+    def viewlist(self) -> List:
+        return self.mylist
 
 if __name__ == "__main__":
-    t = threading.Thread(target=FlaskApp)
-    t2 = threading.Thread(target=Session, args=("?page=1",))
-    
-    t2.start()
-    t2.join()
-    t.start()
-    t.join()
+    runchrome = RunChrome()
 
-    
+    app = Flask(__name__)
+    app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 
+    @app.route("/")
+    def hello_world():
+        mylist = runchrome.viewlist()
 
-    # for i in range(1,6):
-    #     Session("?page="+str(i))
+        if len(mylist) > 0:
+            return jsonify(games=mylist)
+        else:
+            return "Problem with loading RESTAPI."
 
-
+    app.run()
