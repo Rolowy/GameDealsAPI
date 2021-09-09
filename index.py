@@ -1,4 +1,3 @@
-from typing import List
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.options import Options
@@ -9,7 +8,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 import time
 
 class RunChrome:
-    def __init__(self, refreshtime) -> None:
+    def __init__(self, refreshtime):
         self.mylist = {}
         options = Options()
         options.headless = True
@@ -26,31 +25,45 @@ class RunChrome:
         print('Cleaning list')
         self.mylist = {}
 
-        print('Load website')
-        self.driver.get("https://gg.deals/deals/best-deals/")
-
-        
-        
-        gamename = self.driver.find_elements_by_xpath("//div[@data-game-name]//a[@class='ellipsis title']")
-        gameprice = self.driver.find_elements_by_xpath("//div[@data-game-name]//span[@class='numeric']")
-        shop = self.driver.find_elements_by_xpath("//div[@data-game-name]")
-
-
-        # print(len(gamename))
-        # print(len(shop))
         n = 0;
-        for el in gamename:
-            a = gameprice[n].text
-            a = a.replace("ł", "l")
 
-            shop_name = shop[n].get_attribute('data-shop-name')
-            n+=1
+        
+        def loadwebsite(self, x, n):
+            print('Load website number %s' % x)
+            url = "https://gg.deals/deals/best-deals/?page=" + str(x)
+            print(url)
+            self.driver.get(url)
 
-            self.mylist.update({n:{"name":el.text,"values":a, "store":shop_name}})
+
+            gamename = self.driver.find_elements_by_xpath("//div[@data-game-name]//a[@class='ellipsis title']")
+            gameprice = self.driver.find_elements_by_xpath("//div[@data-game-name]//span[@class='numeric']")
+            shop = self.driver.find_elements_by_xpath("//div[@data-game-name]")
+
+
+            # print(len(gamename))
+            # print(len(shop))
+
+            i = 0
+            
+            for el in gamename:
+                a = gameprice[i].text
+                a = a.replace("ł", "l")
+
+                shop_name = shop[i].get_attribute('data-shop-name')
+                i+=1
+                n+=1
+
+                self.mylist.update({n:{"name":el.text,"values":a, "store":shop_name}})
+
+            return n
 
 
             # tables = [el.text, a, shop_name]
             # self.mylist.append(tables)
+
+        for x in range(1,26):
+            n = loadwebsite(self, x, n)
+            
 
         print('Finish')
 
@@ -58,11 +71,13 @@ class RunChrome:
         RunChrome.reload(self)
         print('Loaded data..')
 
-    def viewlist(self) -> List:
+    def viewlist(self):
         return self.mylist
 
 if __name__ == "__main__":
-    runchrome = RunChrome(30)
+    runchrome = RunChrome(900)
+
+    runchrome.reload()
 
     app = Flask(__name__)
     app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
